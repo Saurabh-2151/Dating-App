@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "962924330589",
+    "project_id": "dating-app-2a6a6",
+    "storage_bucket": "dating-app-2a6a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:962924330589:android:13939aa2564b13a2d597b4",
+        "android_client_info": {
+          "package_name": "com.example.dating_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "962924330589-c6m0tuaiptgd43lurd8iqtqao43p7u3s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dating_app",
+            "certificate_hash": "d70d81bae84e19d103dcc0310791cbda0af5278d"
+          }
+        },
+        {
+          "client_id": "962924330589-9551a5gmlah94uu92jdpf0gg47f7h4bc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBg4UVXuUKNqvpX3IDuUJtsth0byi3kbUA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "962924330589-9551a5gmlah94uu92jdpf0gg47f7h4bc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

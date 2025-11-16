@@ -2,9 +2,11 @@ import 'package:dating_app/presentation/screens/discover_screen.dart';
 import 'package:dating_app/presentation/screens/explore_screen.dart';
 import 'package:dating_app/presentation/screens/matches_screen.dart';
 import 'package:dating_app/presentation/screens/profile_screen.dart';
+import 'package:dating_app/presentation/features/auth/google_signin/google_signin_screen.dart';
 import 'package:flutter/material.dart';
 
 class Routes {
+  static const String signIn = '/signin';
   static const String discover = '/discover';
   static const String matches = '/matches';
   static const String explore = '/explore';
@@ -12,6 +14,8 @@ class Routes {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case signIn:
+        return MaterialPageRoute(builder: (_) => const GoogleSignInScreen());
       case discover:
         return MaterialPageRoute(builder: (_) => const DiscoverScreen());
       case matches:
