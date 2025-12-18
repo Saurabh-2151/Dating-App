@@ -12,12 +12,12 @@ import 'package:provider/provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -26,7 +26,7 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  
+
   runApp(const SparkMatchApp());
 }
 
@@ -54,6 +54,14 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
+        if (!authProvider.isInitialized) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
         // Show loading screen while checking auth state
         if (authProvider.isLoading && authProvider.user == null) {
           return const Scaffold(
@@ -63,8 +71,8 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // Show home screen if authenticated, otherwise show sign-in
-        return authProvider.isAuthenticated
+        // Show home screen if authenticated (or guest), otherwise show sign-in
+        return (authProvider.isAuthenticated || authProvider.isGuest)
             ? const HomeScreen()
             : const GoogleSignInScreen();
       },

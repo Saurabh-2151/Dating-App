@@ -23,6 +23,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   double _distance = 50;
   final Set<String> _selectedExtras = {};
 
+  bool _fantasyEnabled = false;
+  String? _fantasyRole;
+  final Set<String> _selectedKinks = {};
+
   int _currentPage = 0;
 
   @override
@@ -33,6 +37,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   void _goToPage(int index) {
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _currentPage = index;
     });
@@ -65,12 +70,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         return true; // distance always has a value
       case 9:
         return _selectedExtras.length >= 1; // require at least one
+      case 10:
+        if (!_fantasyEnabled) return true;
+        return _fantasyRole != null;
+      case 11:
+        return true;
       default:
         return true;
     }
   }
 
   void _handleNext(BuildContext context) {
+    FocusScope.of(context).unfocus();
     if (_currentPage == 1) {
       // Show welcome dialog before proceeding
       showDialog(
@@ -94,6 +105,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(ctx).pop();
+                  FocusManager.instance.primaryFocus?.unfocus();
                   _goToPage(3);
                 },
                 child: const Text("Let's go"),
@@ -105,7 +117,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       return;
     }
 
-    if (_currentPage < 9) {
+    if (_currentPage < 11) {
       _goToPage(_currentPage + 1);
     } else {
       _finishOnboarding(context);
@@ -121,6 +133,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     );
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.darkGradient,
@@ -146,7 +159,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Colors.white),
                               onPressed: () {
                                 if (_currentPage > 0) {
                                   _goToPage(_currentPage - 1);
@@ -162,9 +176,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: LinearProgressIndicator(
-                              value: (_currentPage + 1) / 10,
+                              value: (_currentPage + 1) / 12,
                               backgroundColor: AppColors.cardDark,
-                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  AppColors.primary),
                               minHeight: 6,
                             ),
                           ),
@@ -180,15 +195,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _buildWelcomeScreen(padding),
-                        _buildNameScreen(padding),
+                        _buildNameScreen(context, padding),
                         const SizedBox.shrink(),
-                        _buildGenderScreen(padding),
+                        _buildGenderScreen(context, padding),
                         _buildGenderDetailScreen(padding),
                         _buildOrientationScreen(padding),
                         _buildInterestedInScreen(padding),
                         _buildLookingForScreen(padding),
                         _buildDistanceScreen(padding),
                         _buildExtrasScreen(padding),
+                        _buildFantasyScreen(context, padding),
+                        _buildKinksScreen(context, padding),
                       ],
                     ),
                   ),
@@ -196,44 +213,60 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     padding: EdgeInsets.only(
                       left: padding.left,
                       right: padding.right,
-                      bottom: media.viewInsets.bottom > 0 ? media.viewInsets.bottom : 24,
+                      bottom: 24,
                     ),
-                    child: Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: _canGoNext ? AppColors.primaryGradient : null,
-                        color: _canGoNext ? null : AppColors.cardDark,
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: _canGoNext
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.4),
-                                  blurRadius: 20,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ]
-                            : null,
+                    child: AnimatedPadding(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      padding: EdgeInsets.only(
+                        bottom: media.viewInsets.bottom > 0
+                            ? media.viewInsets.bottom
+                            : 0,
                       ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
+                      child: Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient:
+                              _canGoNext ? AppColors.primaryGradient : null,
+                          color: _canGoNext ? null : AppColors.cardDark,
                           borderRadius: BorderRadius.circular(28),
-                          onTap: _canGoNext ? () => _handleNext(context) : null,
-                          child: Center(
-                            child: Text(
-                              _currentPage == 0 ? 'I agree' : 'Next',
-                              style: TextStyle(
-                                color: _canGoNext ? Colors.white : AppColors.textTertiary,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                          boxShadow: _canGoNext
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.4),
+                                    blurRadius: 20,
+                                    spreadRadius: 0,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(28),
+                            onTap:
+                                _canGoNext ? () => _handleNext(context) : null,
+                            child: Center(
+                              child: Text(
+                                _currentPage == 0 ? 'I agree' : 'Next',
+                                style: TextStyle(
+                                  color: _canGoNext
+                                      ? Colors.white
+                                      : AppColors.textTertiary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ).animate(target: _canGoNext ? 1 : 0).scale(begin: const Offset(0.98, 0.98), end: const Offset(1, 1)),
+                      ).animate(target: _canGoNext ? 1 : 0).scale(
+                            begin: const Offset(0.98, 0.98),
+                            end: const Offset(1, 1),
+                          ),
+                    ),
                   ),
                 ],
               ),
@@ -245,14 +278,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildWelcomeScreen(EdgeInsets padding) {
-    return Padding(
+    return SingleChildScrollView(
       padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
           ShaderMask(
-            shaderCallback: (bounds) => AppColors.primaryGradient.createShader(bounds),
+            shaderCallback: (bounds) =>
+                AppColors.primaryGradient.createShader(bounds),
             child: const Text(
               'Welcome to SparkMatch.',
               style: TextStyle(
@@ -276,26 +310,40 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
   List<Widget> _buildRuleItems() {
     final rules = [
-      ('Be yourself.', 'Make sure your photos, age and bio are true to who you are.'),
+      (
+        'Be yourself.',
+        'Make sure your photos, age and bio are true to who you are.'
+      ),
       ('Stay safe.', "Don't be too quick to give out personal information."),
-      ('Play it cool.', 'Respect others and treat them as you would like to be treated.'),
+      (
+        'Play it cool.',
+        'Respect others and treat them as you would like to be treated.'
+      ),
       ('Be proactive.', 'Always report bad behaviour.'),
     ];
-    
+
     return rules.asMap().entries.map((entry) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: _RuleItem(
           title: entry.value.$1,
           subtitle: entry.value.$2,
-        ).animate(delay: (300 + entry.key * 100).ms).fadeIn(duration: 600.ms).slideX(begin: -0.1, end: 0),
+        )
+            .animate(delay: (300 + entry.key * 100).ms)
+            .fadeIn(duration: 600.ms)
+            .slideX(begin: -0.1, end: 0),
       );
     }).toList();
   }
 
-  Widget _buildNameScreen(EdgeInsets padding) {
-    return Padding(
-      padding: padding,
+  Widget _buildNameScreen(BuildContext context, EdgeInsets padding) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final extraBottom = bottomInset + 56 + 24;
+    return SingleChildScrollView(
+      padding: padding.copyWith(bottom: padding.bottom + extraBottom),
+      physics: bottomInset > 0
+          ? const BouncingScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -325,11 +373,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 hintText: 'Enter first name',
                 hintStyle: TextStyle(color: AppColors.textTertiary),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               ),
               onChanged: (_) => setState(() {}),
             ),
-          ).animate(delay: 200.ms).fadeIn(duration: 600.ms).slideY(begin: 0.1, end: 0),
+          )
+              .animate(delay: 200.ms)
+              .fadeIn(duration: 600.ms)
+              .slideY(begin: 0.1, end: 0),
           const SizedBox(height: 12),
           const Text(
             "This is how it'll appear on your profile. Can't change it later.",
@@ -340,10 +392,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     );
   }
 
-  Widget _buildGenderScreen(EdgeInsets padding) {
+  Widget _buildGenderScreen(BuildContext context, EdgeInsets padding) {
     final options = ['Man', 'Woman', 'Beyond binary'];
-    return Padding(
-      padding: padding,
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final extraBottom = bottomInset + 56 + 24;
+    return SingleChildScrollView(
+      padding: padding.copyWith(bottom: padding.bottom + extraBottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -650,6 +704,174 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       ),
     );
   }
+
+  Widget _buildFantasyScreen(BuildContext context, EdgeInsets padding) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final extraBottom = bottomInset + 56 + 24;
+
+    final roles = [
+      'Romantic CEO',
+      'Mystery Stranger',
+      'Soft Dominant',
+      'Creative Dreamer',
+    ];
+
+    return SingleChildScrollView(
+      padding: padding.copyWith(bottom: padding.bottom + extraBottom),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          const Text(
+            'Explore Fantasy Mode?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+            ),
+          ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.2, end: 0),
+          const SizedBox(height: 12),
+          const Text(
+            'Choose a vibe and connect through imagination. Totally optional.',
+            style: TextStyle(color: Colors.white70),
+          ).animate(delay: 150.ms).fadeIn(duration: 600.ms),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.cardDark,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.cardLight,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Enable Fantasy Mode',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+                Switch(
+                  value: _fantasyEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) {
+                    setState(() {
+                      _fantasyEnabled = v;
+                      if (!v) {
+                        _fantasyRole = null;
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+          )
+              .animate(delay: 250.ms)
+              .fadeIn(duration: 600.ms)
+              .slideY(begin: 0.08, end: 0),
+          if (_fantasyEnabled) ...[
+            const SizedBox(height: 24),
+            const Text(
+              'Pick a role (optional vibe, required only if enabled):',
+              style: TextStyle(color: AppColors.textSecondary),
+            ).animate(delay: 300.ms).fadeIn(duration: 600.ms),
+            const SizedBox(height: 12),
+            ...roles.map(
+              (r) => _SelectableTile(
+                label: r,
+                selected: _fantasyRole == r,
+                onTap: () {
+                  setState(() {
+                    _fantasyRole = r;
+                  });
+                },
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 16),
+            const Text(
+              'You can turn this on later in settings.',
+              style: TextStyle(color: Colors.white54),
+            ).animate(delay: 250.ms).fadeIn(duration: 600.ms),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKinksScreen(BuildContext context, EdgeInsets padding) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final extraBottom = bottomInset + 56 + 24;
+
+    final tags = [
+      'Romantic',
+      'Slow burn',
+      'Praise',
+      'Dominant energy',
+      'Submissive energy',
+      'Gentle & caring',
+      'Roleplay',
+      'Open-minded',
+    ];
+
+    return SingleChildScrollView(
+      padding: padding.copyWith(bottom: padding.bottom + extraBottom),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          const Text(
+            'Comfort & Preferences',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+            ),
+          ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.2, end: 0),
+          const SizedBox(height: 12),
+          const Text(
+            'Only share what feels right. You can skip or edit later.',
+            style: TextStyle(color: Colors.white70),
+          ).animate(delay: 150.ms).fadeIn(duration: 600.ms),
+          const SizedBox(height: 8),
+          const Text(
+            'Skip for now',
+            style: TextStyle(color: Colors.white54, fontSize: 13),
+          ).animate(delay: 250.ms).fadeIn(duration: 600.ms),
+          const SizedBox(height: 24),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: tags.map((t) {
+              final selected = _selectedKinks.contains(t);
+              return FilterChip(
+                label: Text(t),
+                selected: selected,
+                onSelected: (_) {
+                  setState(() {
+                    if (selected) {
+                      _selectedKinks.remove(t);
+                    } else {
+                      _selectedKinks.add(t);
+                    }
+                  });
+                },
+                selectedColor: Colors.pink,
+                labelStyle: const TextStyle(color: Colors.white),
+                backgroundColor: Colors.grey.shade900,
+              );
+            }).toList(),
+          )
+              .animate(delay: 250.ms)
+              .fadeIn(duration: 600.ms)
+              .slideY(begin: 0.06, end: 0),
+        ],
+      ),
+    );
+  }
 }
 
 class _RuleItem extends StatelessWidget {
@@ -766,7 +988,8 @@ class _SelectableTile extends StatelessWidget {
                     style: TextStyle(
                       color: selected ? Colors.white : AppColors.textPrimary,
                       fontSize: 16,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -789,7 +1012,9 @@ class _SelectableTile extends StatelessWidget {
           ),
         ),
       ),
-    ).animate(target: selected ? 1 : 0).scale(begin: const Offset(0.98, 0.98), end: const Offset(1, 1));
+    )
+        .animate(target: selected ? 1 : 0)
+        .scale(begin: const Offset(0.98, 0.98), end: const Offset(1, 1));
   }
 }
 

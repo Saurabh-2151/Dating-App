@@ -6,6 +6,8 @@ class DiscoverProvider with ChangeNotifier {
   final PageController pageController = PageController();
   final MatchService _matchService = MatchService();
 
+  bool _disposed = false;
+
   List<User> users = [];
   bool isLoading = true;
   int currentIndex = 0;
@@ -18,17 +20,23 @@ class DiscoverProvider with ChangeNotifier {
     try {
       users = await _matchService.getDiscoverableUsers();
       isLoading = false;
-      notifyListeners();
+      if (!_disposed) {
+        notifyListeners();
+      }
     } catch (e) {
       isLoading = false;
-      notifyListeners();
+      if (!_disposed) {
+        notifyListeners();
+      }
       rethrow;
     }
   }
 
   void onPageChanged(int index) {
     currentIndex = index;
-    notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
 
   Future<void> swipeLeft() async {
@@ -60,12 +68,15 @@ class DiscoverProvider with ChangeNotifier {
       );
     } else {
       users.removeAt(currentIndex);
-      notifyListeners();
+      if (!_disposed) {
+        notifyListeners();
+      }
     }
   }
 
   @override
   void dispose() {
+    _disposed = true;
     pageController.dispose();
     super.dispose();
   }

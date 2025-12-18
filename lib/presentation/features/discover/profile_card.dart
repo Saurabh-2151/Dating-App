@@ -57,11 +57,15 @@ class ProfileCard extends StatelessWidget {
                     const Icon(Icons.location_on_outlined,
                         size: 16, color: Colors.white70),
                     const SizedBox(width: 4),
-                    Text(
-                      '${user.distance} miles away',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
+                    Expanded(
+                      child: Text(
+                        '${user.distance} miles away',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                        ),
                       ),
                     ),
                   ],
@@ -69,6 +73,8 @@ class ProfileCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   user.bio,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 18,
                     color: Colors.white,

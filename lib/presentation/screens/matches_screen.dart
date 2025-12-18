@@ -103,11 +103,15 @@ class MatchesScreen extends StatelessWidget {
                     const Icon(Icons.location_on,
                         size: 14, color: Colors.white70),
                     const SizedBox(width: 4),
-                    Text(
-                      '${user.distance} miles away',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                    Expanded(
+                      child: Text(
+                        '${user.distance} miles away',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],

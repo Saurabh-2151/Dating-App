@@ -2,7 +2,6 @@ import 'package:dating_app/core/constants/app_colors.dart';
 import 'package:dating_app/data/models/users/user_model.dart';
 import 'package:flutter/material.dart';
 
-
 class ProfileHeader extends StatelessWidget {
   final User user;
 
@@ -51,12 +50,17 @@ class ProfileHeader extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.location_on, size: 16, color: Colors.white70),
+                  const Icon(Icons.location_on,
+                      size: 16, color: Colors.white70),
                   const SizedBox(width: 4),
-                  Text(
-                    '${user.distance} miles away',
-                    style: const TextStyle(
-                      color: Colors.white70,
+                  Expanded(
+                    child: Text(
+                      '${user.distance} miles away',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                      ),
                     ),
                   ),
                 ],
