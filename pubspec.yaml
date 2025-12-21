@@ -40,6 +40,7 @@ dependencies:
   firebase_auth: ^6.1.2
   google_sign_in: ^6.2.1
   shared_preferences: ^2.3.2
+  cloud_firestore: ^6.1.0
   
   # Premium UI & Animations
   flutter_animate: ^4.5.0

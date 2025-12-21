@@ -1,5 +1,5 @@
 import 'package:dating_app/core/theme/app_theme.dart';
-import 'package:dating_app/presentation/features/onboarding/onboarding_flow_screen.dart';
+import 'package:dating_app/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const OnboardingFlowScreen(),
+              const AuthWrapper(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

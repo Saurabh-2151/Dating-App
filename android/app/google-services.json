@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "962924330589-mqbe516c7ns0e1567j19falptdjt4jcu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dating_app",
+            "certificate_hash": "9bf1c677b78485310a7b56e6589887dca5d7fb7c"
+          }
+        },
+        {
           "client_id": "962924330589-9551a5gmlah94uu92jdpf0gg47f7h4bc.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dating_app/data/providers/auth_provider.dart';
+import 'package:dating_app/presentation/features/onboarding/onboarding_flow_screen.dart';
 import 'package:dating_app/presentation/screens/home_screen.dart';
 
 class GoogleSignInScreen extends StatefulWidget {
@@ -157,12 +158,21 @@ class _GoogleSignInScreenState extends State<GoogleSignInScreen> {
                                     final success =
                                         await authProvider.signInWithGoogle();
                                     if (success && mounted) {
-                                      Navigator.of(context).pushReplacement(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const HomeScreen(),
-                                        ),
-                                      );
+                                      if (authProvider.hasCompletedOnboarding) {
+                                        Navigator.of(context).pushReplacement(
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const HomeScreen(),
+                                          ),
+                                        );
+                                      } else {
+                                        Navigator.of(context).pushReplacement(
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const OnboardingFlowScreen(),
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                             icon: authProvider.isLoading

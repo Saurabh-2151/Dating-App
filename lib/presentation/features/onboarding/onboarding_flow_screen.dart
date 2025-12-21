@@ -1,5 +1,8 @@
-import 'package:dating_app/main.dart';
 import 'package:dating_app/core/theme/app_theme.dart';
+import 'package:dating_app/data/providers/auth_provider.dart';
+import 'package:dating_app/data/providers/onboarding_provider.dart';
+import 'package:dating_app/main.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:ui';
@@ -15,20 +18,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   final PageController _pageController = PageController();
   final TextEditingController _nameController = TextEditingController();
 
-  String? _selectedGender;
-  String? _selectedGenderDetail;
-  String? _selectedOrientation;
-  String? _selectedInterestIn;
-  final Set<String> _selectedLookingFor = {};
-  double _distance = 50;
-  final Set<String> _selectedExtras = {};
-
-  bool _fantasyEnabled = false;
-  String? _fantasyRole;
-  final Set<String> _selectedKinks = {};
-
-  int _currentPage = 0;
-
   @override
   void dispose() {
     _pageController.dispose();
@@ -36,11 +25,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     super.dispose();
   }
 
-  void _goToPage(int index) {
+  void _goToPage(BuildContext context, int index) {
     FocusManager.instance.primaryFocus?.unfocus();
-    setState(() {
-      _currentPage = index;
-    });
+    context.read<OnboardingProvider>().setCurrentPage(index);
     _pageController.animateToPage(
       index,
       duration: const Duration(milliseconds: 300),
@@ -48,31 +35,57 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     );
   }
 
-  void _finishOnboarding(BuildContext context) {
-    Navigator.of(context).pushReplacement(
+  Future<void> _finishOnboarding(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final onboarding = Provider.of<OnboardingProvider>(context, listen: false);
+    final onboardingData = {
+      'name': onboarding.name,
+      'gender': onboarding.gender,
+      'genderDetail': onboarding.genderDetail,
+      'orientation': onboarding.orientation,
+      'interestIn': onboarding.interestIn,
+      'lookingFor': onboarding.lookingFor.toList(),
+      'distance': onboarding.distance,
+      'extras': onboarding.extras.toList(),
+      'fantasyEnabled': onboarding.fantasyEnabled,
+      'fantasyRole': onboarding.fantasyRole,
+      'kinks': onboarding.kinks.toList(),
+    };
+
+    try {
+      await authProvider.saveOnboardingData(onboardingData);
+      await authProvider.completeOnboarding();
+    } catch (_) {
+      // Ignore errors here so onboarding can still complete visually
+    }
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthWrapper()),
+      (route) => false,
     );
   }
 
-  bool get _canGoNext {
-    switch (_currentPage) {
+  bool _canGoNext(OnboardingProvider onboarding) {
+    switch (onboarding.currentPage) {
       case 1:
-        return _nameController.text.trim().isNotEmpty;
+        return onboarding.name.trim().isNotEmpty;
       case 3:
-        return _selectedGender != null;
+        return onboarding.gender != null;
       case 5:
-        return _selectedOrientation != null;
+        return onboarding.orientation != null;
       case 6:
-        return _selectedInterestIn != null;
+        return onboarding.interestIn != null;
       case 7:
-        return _selectedLookingFor.isNotEmpty;
+        return onboarding.lookingFor.isNotEmpty;
       case 8:
         return true; // distance always has a value
       case 9:
-        return _selectedExtras.length >= 1; // require at least one
+        return onboarding.extras.length >= 1; // require at least one
       case 10:
-        if (!_fantasyEnabled) return true;
-        return _fantasyRole != null;
+        if (!onboarding.fantasyEnabled) return true;
+        return onboarding.fantasyRole != null;
       case 11:
         return true;
       default:
@@ -81,8 +94,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   void _handleNext(BuildContext context) {
+    final onboarding = Provider.of<OnboardingProvider>(context, listen: false);
     FocusScope.of(context).unfocus();
-    if (_currentPage == 1) {
+    if (onboarding.currentPage == 1) {
       // Show welcome dialog before proceeding
       showDialog(
         context: context,
@@ -106,7 +120,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 onPressed: () {
                   Navigator.of(ctx).pop();
                   FocusManager.instance.primaryFocus?.unfocus();
-                  _goToPage(3);
+                  _goToPage(context, 3);
                 },
                 child: const Text("Let's go"),
               ),
@@ -117,8 +131,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       return;
     }
 
-    if (_currentPage < 11) {
-      _goToPage(_currentPage + 1);
+    if (onboarding.currentPage < 11) {
+      _goToPage(context, onboarding.currentPage + 1);
     } else {
       _finishOnboarding(context);
     }
@@ -126,6 +140,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final onboarding = context.watch<OnboardingProvider>();
     final media = MediaQuery.of(context);
     final padding = EdgeInsets.symmetric(
       horizontal: media.size.width * 0.06,
@@ -152,7 +167,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     padding: padding,
                     child: Row(
                       children: [
-                        if (_currentPage > 0)
+                        if (onboarding.currentPage > 0)
                           Container(
                             decoration: BoxDecoration(
                               color: AppColors.cardDark.withOpacity(0.5),
@@ -162,8 +177,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                               icon: const Icon(Icons.arrow_back,
                                   color: Colors.white),
                               onPressed: () {
-                                if (_currentPage > 0) {
-                                  _goToPage(_currentPage - 1);
+                                if (onboarding.currentPage > 0) {
+                                  _goToPage(
+                                      context, onboarding.currentPage - 1);
                                 }
                               },
                             ),
@@ -176,7 +192,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: LinearProgressIndicator(
-                              value: (_currentPage + 1) / 12,
+                              value: (onboarding.currentPage + 1) / 12,
                               backgroundColor: AppColors.cardDark,
                               valueColor: const AlwaysStoppedAnimation<Color>(
                                   AppColors.primary),
@@ -227,11 +243,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                         width: double.infinity,
                         height: 56,
                         decoration: BoxDecoration(
-                          gradient:
-                              _canGoNext ? AppColors.primaryGradient : null,
-                          color: _canGoNext ? null : AppColors.cardDark,
+                          gradient: _canGoNext(onboarding)
+                              ? AppColors.primaryGradient
+                              : null,
+                          color: _canGoNext(onboarding)
+                              ? null
+                              : AppColors.cardDark,
                           borderRadius: BorderRadius.circular(28),
-                          boxShadow: _canGoNext
+                          boxShadow: _canGoNext(onboarding)
                               ? [
                                   BoxShadow(
                                     color: AppColors.primary.withOpacity(0.4),
@@ -246,13 +265,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(28),
-                            onTap:
-                                _canGoNext ? () => _handleNext(context) : null,
+                            onTap: _canGoNext(onboarding)
+                                ? () => _handleNext(context)
+                                : null,
                             child: Center(
                               child: Text(
-                                _currentPage == 0 ? 'I agree' : 'Next',
+                                onboarding.currentPage == 0
+                                    ? 'I agree'
+                                    : onboarding.currentPage == 11
+                                        ? "Let's start"
+                                        : 'Next',
                                 style: TextStyle(
-                                  color: _canGoNext
+                                  color: _canGoNext(onboarding)
                                       ? Colors.white
                                       : AppColors.textTertiary,
                                   fontSize: 16,
@@ -262,7 +286,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                             ),
                           ),
                         ),
-                      ).animate(target: _canGoNext ? 1 : 0).scale(
+                      ).animate(target: _canGoNext(onboarding) ? 1 : 0).scale(
                             begin: const Offset(0.98, 0.98),
                             end: const Offset(1, 1),
                           ),
@@ -337,6 +361,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildNameScreen(BuildContext context, EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final extraBottom = bottomInset + 56 + 24;
     return SingleChildScrollView(
@@ -376,7 +401,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               ),
-              onChanged: (_) => setState(() {}),
+              onChanged: onboarding.setName,
             ),
           )
               .animate(delay: 200.ms)
@@ -393,6 +418,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildGenderScreen(BuildContext context, EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final options = ['Man', 'Woman', 'Beyond binary'];
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final extraBottom = bottomInset + 56 + 24;
@@ -418,11 +444,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           const SizedBox(height: 24),
           ...options.map((g) => _SelectableTile(
                 label: g,
-                selected: _selectedGender == g,
+                selected: onboarding.gender == g,
                 onTap: () {
-                  setState(() {
-                    _selectedGender = g;
-                  });
+                  onboarding.setGender(g);
                 },
               )),
           const SizedBox(height: 16),
@@ -437,6 +461,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildGenderDetailScreen(EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context, listen: false);
     final details = [
       'Cis man',
       'Intersex man',
@@ -448,11 +473,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       children: details
           .map((d) => _SelectableTile(
                 label: d,
-                selected: _selectedGenderDetail == d,
+                selected: onboarding.genderDetail == d,
                 onTap: () {
-                  setState(() {
-                    _selectedGenderDetail = d;
-                  });
+                  onboarding.setGenderDetail(d);
                 },
               ))
           .toList(),
@@ -460,6 +483,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildOrientationScreen(EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final options = ['Straight', 'Gay', 'Lesbian', 'Bisexual', 'Asexual'];
     return Padding(
       padding: padding,
@@ -483,11 +507,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           const SizedBox(height: 24),
           ...options.map((o) => _SelectableTile(
                 label: o,
-                selected: _selectedOrientation == o,
+                selected: onboarding.orientation == o,
                 onTap: () {
-                  setState(() {
-                    _selectedOrientation = o;
-                  });
+                  onboarding.setOrientation(o);
                 },
               )),
         ],
@@ -496,6 +518,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildInterestedInScreen(EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final options = ['Men', 'Women', 'Beyond binary', 'Everyone'];
     return Padding(
       padding: padding,
@@ -519,11 +542,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           const SizedBox(height: 24),
           ...options.map((o) => _SelectableTile(
                 label: o,
-                selected: _selectedInterestIn == o,
+                selected: onboarding.interestIn == o,
                 onTap: () {
-                  setState(() {
-                    _selectedInterestIn = o;
-                  });
+                  onboarding.setInterestIn(o);
                 },
               )),
         ],
@@ -532,6 +553,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildLookingForScreen(EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final options = [
       'Long-term partner',
       'Long-term, but short-term OK',
@@ -564,18 +586,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             spacing: 8,
             runSpacing: 8,
             children: options.map((o) {
-              final selected = _selectedLookingFor.contains(o);
+              final selected = onboarding.lookingFor.contains(o);
               return ChoiceChip(
                 label: Text(o),
                 selected: selected,
                 onSelected: (_) {
-                  setState(() {
-                    if (selected) {
-                      _selectedLookingFor.remove(o);
-                    } else {
-                      _selectedLookingFor.add(o);
-                    }
-                  });
+                  onboarding.toggleLookingFor(o);
                 },
                 selectedColor: Colors.pink,
                 labelStyle: TextStyle(
@@ -591,6 +607,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildDistanceScreen(EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     return Padding(
       padding: padding,
       child: Column(
@@ -612,18 +629,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Distance preference ${_distance.toStringAsFixed(0)} mi',
+            'Distance preference ${onboarding.distance.toStringAsFixed(0)} mi',
             style: const TextStyle(color: Colors.white),
           ),
           Slider(
-            value: _distance,
+            value: onboarding.distance,
             min: 1,
             max: 100,
             divisions: 99,
             activeColor: Colors.pink,
             inactiveColor: Colors.white24,
-            label: _distance.toStringAsFixed(0),
-            onChanged: (v) => setState(() => _distance = v),
+            label: onboarding.distance.toStringAsFixed(0),
+            onChanged: onboarding.setDistance,
           ),
           const SizedBox(height: 8),
           const Text(
@@ -636,6 +653,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildExtrasScreen(EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final extras = [
       "I stay on WhatsApp all day",
       'Big time texter',
@@ -678,18 +696,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               spacing: 8,
               runSpacing: 8,
               children: extras.map((e) {
-                final selected = _selectedExtras.contains(e);
+                final selected = onboarding.extras.contains(e);
                 return FilterChip(
                   label: Text(e),
                   selected: selected,
                   onSelected: (_) {
-                    setState(() {
-                      if (selected) {
-                        _selectedExtras.remove(e);
-                      } else {
-                        _selectedExtras.add(e);
-                      }
-                    });
+                    onboarding.toggleExtra(e);
                   },
                   selectedColor: Colors.pink,
                   labelStyle: TextStyle(
@@ -706,6 +718,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildFantasyScreen(BuildContext context, EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final extraBottom = bottomInset + 56 + 24;
 
@@ -755,15 +768,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                   ),
                 ),
                 Switch(
-                  value: _fantasyEnabled,
+                  value: onboarding.fantasyEnabled,
                   activeColor: AppColors.primary,
                   onChanged: (v) {
-                    setState(() {
-                      _fantasyEnabled = v;
-                      if (!v) {
-                        _fantasyRole = null;
-                      }
-                    });
+                    onboarding.setFantasyEnabled(v);
                   },
                 ),
               ],
@@ -772,21 +780,19 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               .animate(delay: 250.ms)
               .fadeIn(duration: 600.ms)
               .slideY(begin: 0.08, end: 0),
-          if (_fantasyEnabled) ...[
+          if (onboarding.fantasyEnabled) ...[
             const SizedBox(height: 24),
             const Text(
-              'Pick a role (optional vibe, required only if enabled):',
+              'Pick a role:',
               style: TextStyle(color: AppColors.textSecondary),
             ).animate(delay: 300.ms).fadeIn(duration: 600.ms),
             const SizedBox(height: 12),
             ...roles.map(
               (r) => _SelectableTile(
                 label: r,
-                selected: _fantasyRole == r,
+                selected: onboarding.fantasyRole == r,
                 onTap: () {
-                  setState(() {
-                    _fantasyRole = r;
-                  });
+                  onboarding.setFantasyRole(r);
                 },
               ),
             ),
@@ -803,6 +809,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildKinksScreen(BuildContext context, EdgeInsets padding) {
+    final onboarding = Provider.of<OnboardingProvider>(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final extraBottom = bottomInset + 56 + 24;
 
@@ -846,18 +853,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             spacing: 8,
             runSpacing: 8,
             children: tags.map((t) {
-              final selected = _selectedKinks.contains(t);
+              final selected = onboarding.kinks.contains(t);
               return FilterChip(
                 label: Text(t),
                 selected: selected,
                 onSelected: (_) {
-                  setState(() {
-                    if (selected) {
-                      _selectedKinks.remove(t);
-                    } else {
-                      _selectedKinks.add(t);
-                    }
-                  });
+                  onboarding.toggleKink(t);
                 },
                 selectedColor: Colors.pink,
                 labelStyle: const TextStyle(color: Colors.white),

@@ -3,6 +3,7 @@ import 'package:dating_app/presentation/features/auth/google_signin/google_signi
 import 'package:dating_app/presentation/features/onboarding/onboarding_flow_screen.dart';
 import 'package:dating_app/presentation/features/auth/splash/splash_screen.dart';
 import 'package:dating_app/data/providers/auth_provider.dart';
+import 'package:dating_app/data/providers/onboarding_provider.dart';
 import 'package:dating_app/core/theme/app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -35,8 +36,11 @@ class SparkMatchApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => OnboardingProvider()),
+      ],
       child: MaterialApp(
         title: 'SparkMatch',
         debugShowCheckedModeBanner: false,
@@ -72,9 +76,19 @@ class AuthWrapper extends StatelessWidget {
         }
 
         // Show home screen if authenticated (or guest), otherwise show sign-in
-        return (authProvider.isAuthenticated || authProvider.isGuest)
-            ? const HomeScreen()
-            : const GoogleSignInScreen();
+        if (authProvider.isGuest) {
+          return const HomeScreen();
+        }
+
+        if (authProvider.isAuthenticated && !authProvider.hasCompletedOnboarding) {
+          return const OnboardingFlowScreen();
+        }
+
+        if (authProvider.isAuthenticated) {
+          return const HomeScreen();
+        }
+
+        return const GoogleSignInScreen();
       },
     );
   }

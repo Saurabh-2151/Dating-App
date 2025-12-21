@@ -1,5 +1,6 @@
 import 'package:dating_app/core/constants/app_colors.dart';
 import 'package:dating_app/data/providers/auth_provider.dart';
+import 'package:dating_app/presentation/features/auth/google_signin/google_signin_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -254,7 +255,12 @@ class ProfileScreen extends StatelessWidget {
               onPressed: () async {
                 Navigator.pop(dialogContext);
                 await authProvider.signOut();
-                // The AuthWrapper will automatically navigate to sign-in screen
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => const GoogleSignInScreen(),
+                  ),
+                  (route) => false,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,

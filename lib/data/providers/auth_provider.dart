@@ -10,6 +10,7 @@ class AuthProvider with ChangeNotifier {
   String? _errorMessage;
   bool _isGuest = false;
   bool _initialized = false;
+  bool _hasCompletedOnboarding = false;
 
   static const String _guestModeKey = 'auth_is_guest';
 
@@ -19,6 +20,7 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
   bool get isGuest => _isGuest;
   bool get isInitialized => _initialized;
+  bool get hasCompletedOnboarding => _hasCompletedOnboarding;
 
   AuthProvider() {
     // Listen to auth state changes
@@ -37,6 +39,10 @@ class AuthProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _isGuest = prefs.getBool(_guestModeKey) ?? false;
+      if (_user != null) {
+        _hasCompletedOnboarding =
+            await _authService.hasCompletedOnboarding(_user!.uid);
+      }
     } catch (_) {
       _isGuest = false;
     } finally {
@@ -75,6 +81,8 @@ class AuthProvider with ChangeNotifier {
 
       if (userCredential != null) {
         _user = userCredential.user;
+        _hasCompletedOnboarding = await _authService
+            .hasCompletedOnboarding(userCredential.user!.uid);
         await _clearGuestMode();
         _isLoading = false;
         notifyListeners();
@@ -100,6 +108,7 @@ class AuthProvider with ChangeNotifier {
 
       await _authService.signOut();
       _user = null;
+      _hasCompletedOnboarding = false;
       await _clearGuestMode();
       _isLoading = false;
       notifyListeners();
@@ -113,5 +122,19 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  Future<void> completeOnboarding() async {
+    final current = _user;
+    if (current == null) return;
+    await _authService.setOnboardingCompleted(current.uid);
+    _hasCompletedOnboarding = true;
+    notifyListeners();
+  }
+
+  Future<void> saveOnboardingData(Map<String, dynamic> data) async {
+    final current = _user;
+    if (current == null) return;
+    await _authService.saveOnboardingData(current.uid, data);
   }
 }
